@@ -10,10 +10,10 @@ import java.io.*;
 
 public class Solution0{
 	public static void main(String[] args) throws java.io.IOException {
-		int a, b;
+		int a, b,c,d,e,f,g,h,j,k,q,w,r;
 		
-		b = 1;
-		if(b == 0){
+		e = 1;
+		if(e == 0){
 			System.out.println("Hello world!");
 		}
 		else{
