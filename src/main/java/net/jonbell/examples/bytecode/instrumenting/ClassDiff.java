@@ -89,7 +89,7 @@ public class ClassDiff{
 		
 		rowNum = originalInstructionSets.size();
 		colNum = modifiedInstructionSets.size();
-		dp = new Element[10][10];
+		dp = new Element[rowNum][colNum];
 		lcs = new LinkedList<InstructionSet>();
 		
 		for(y = 0; y < rowNum; ++y){
