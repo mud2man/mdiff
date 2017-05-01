@@ -2,9 +2,23 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>net.jonbell.examples.bytecode</groupId>
-	<artifactId>instrumenter-maven-plugin</artifactId>
+	<artifactId>mdiff-maven-plugin</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<parent>
+		<groupId>edu.gmu.swe</groupId>
+		<artifactId>muplay</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+
 	<packaging>maven-plugin</packaging>
+
+	<properties>
+    <maven.compiler.testSource>1.8</maven.compiler.testSource>
+    <maven.compiler.testTarget>1.8</maven.compiler.testTarget>
+    <phosphor.version>0.0.3-SNAPSHOT</phosphor.version>
+  	</properties>
+
+
 	<build>
 		<plugins>
 			<plugin>
@@ -106,5 +120,13 @@
 			<artifactId>asm-all</artifactId>
 			<version>5.0.3</version>
 		</dependency>
+
+		<dependency>
+      		<groupId>edu.columbia.cs.psl.phosphor</groupId>
+      		<artifactId>Phosphor</artifactId>
+      		<version>${phosphor.version}</version>
+    	</dependency>  
+
+
 	</dependencies>
 </project>

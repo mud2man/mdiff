@@ -69,18 +69,12 @@ public class Instrumenter {
 		Options options = new Options();
 		options.addOption(help);
 		ClassDiff classDiff;
+		File disOldOutputDir;
+		File disNewOutputDir;
+		File newDisFile;
+		File outputDir;
 
-		/* Initialize the file writer for parser */
-		File file0 = new File ("class0.dis");
-		File file1 = new File ("class1.dis");
-		classWriters = new PrintWriter[2];
-		try {
-			classWriters[0] = new PrintWriter(file0);
-			classWriters[1] = new PrintWriter(file1);  
-		} catch (FileNotFoundException e) {
-			 e.printStackTrace();
-			 System.exit(-1);
-		}
+		classWriters = new PrintWriter[1];
 		
 		CommandLineParser parser = new BasicParser();
 		CommandLine line = null;
@@ -93,27 +87,42 @@ public class Instrumenter {
 			System.err.println(exp.getMessage());
 			return;
 		}
-		if (line.hasOption("help") || line.getArgs().length != 3) {
+		if (line.hasOption("help") || line.getArgs().length != 4 ) {
 			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("java -jar instrumenter.jar [OPTIONS] [input] [output]", options);
+			formatter.printHelp("java -jar instrumenter.jar [OPTIONS] [input] [input] [temp] [output]", options);
 			return;
 		}
 
 		PreMain.IS_RUNTIME_INST = false;
-	
-		/* parse class into file0 and file1 */
-		for(classId = 0; classId < 2; classId++){
-		    instrumentDir(line.getArgs()[classId], line.getArgs()[2]);
-		    classWriters[classId].close();
-		}
 		
-		classDiff = new ClassDiff(file0, file1);
-		classDiff.longestCommonSequenceDiff();
+		classId = 0;
+		instrumentDir(line.getArgs()[0], line.getArgs()[2], 0);
+		instrumentDir(line.getArgs()[1], line.getArgs()[2], 1);
+		
+	    /* Get the file discriptors of old and new versions */	
+		disOldOutputDir = new File(line.getArgs()[2] + File.separator + "oldVersion");
+		disNewOutputDir = new File(line.getArgs()[2] + File.separator + "newVersion");
+        outputDir = new File(line.getArgs()[3]);
+		
+		if (!outputDir.exists()){
+			outputDir.mkdir();
+        }
+        
+        /* 
+         * Given the directories of old version(disOldOutputDir) and new version(disNewOutputDir),
+         * the name of "*.class" in both old and new version must be the same. And now we can find the difference 
+         * between the tow versions by iterate all the files in both directories
+         */
+		for (File oldDisFile : disOldOutputDir.listFiles()) {
+			newDisFile = new File(disNewOutputDir.getPath() + File.separator +oldDisFile.getName());
+			classDiff = new ClassDiff(oldDisFile, newDisFile, outputDir);
+			classDiff.longestCommonSequenceDiff();
+		}
 	}
 
 	static File rootOutputDir;
 
-	public static void instrumentDir(String inputFolder, String outputFolder) {
+	public static void instrumentDir(String inputFolder, String outputFolder, int version) {
 
 		rootOutputDir = new File(outputFolder);
 		if (!rootOutputDir.exists())
@@ -125,12 +134,12 @@ public class Instrumenter {
 			System.exit(-1);
 		}
 		if (f.isDirectory())
-			processDirectory(f, rootOutputDir, true);
+			processDirectory(f, rootOutputDir, true, version);
 		else if (inputFolder.endsWith(".jar") || inputFolder.endsWith(".war"))
 			processJar(f, rootOutputDir);
 		else if (inputFolder.endsWith(".class"))
 			try {
-				processClass(f.getName(), new FileInputStream(f), rootOutputDir);
+				processClass(f.getName(), new FileInputStream(f), rootOutputDir, version);
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			}
@@ -143,39 +152,63 @@ public class Instrumenter {
 	}
 
 	static String lastInstrumentedClass;
+	static String lastInstrumentedDis;
 
-	private static void processClass(String name, InputStream is, File outputDir) {
-
+	private static void processClass(String name, InputStream is, File outputDir, int version) {
+		File disFile;
 		try {
 			FileOutputStream fos = new FileOutputStream(outputDir.getPath() + File.separator + name);
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
 			lastInstrumentedClass = outputDir.getPath() + File.separator + name;
+			if(version == 0)
+				lastInstrumentedDis = outputDir.getPath() + File.separator + "oldVersion" + File.separator +
+				                      name.substring(0, name.length() - 6) + ".dis";
+			else
+				lastInstrumentedDis = outputDir.getPath() + File.separator + "newVersion" + File.separator +
+				                      name.substring(0, name.length() - 6) + ".dis";
 
+			disFile = new File (lastInstrumentedDis);
+			classWriters[0] = new PrintWriter(disFile);
+					
 			byte[] c = instrumentClass(outputDir.getAbsolutePath(), is, true);
 			bos.write(c);
 			bos.writeTo(fos);
 			fos.close();
 			is.close();
+			classWriters[0].close();
 
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
 	}
 
-	private static void processDirectory(File f, File parentOutputDir, boolean isFirstLevel) {
+	private static void processDirectory(File f, File parentOutputDir, boolean isFirstLevel, int version) {
 		File thisOutputDir;
+		File disOutputDir;
+			
+		
 		if (isFirstLevel) {
 			thisOutputDir = parentOutputDir;
 		} else {
 			thisOutputDir = new File(parentOutputDir.getAbsolutePath() + File.separator + f.getName());
 			thisOutputDir.mkdir();
 		}
+		
+		if(version == 0){
+			disOutputDir = new File(parentOutputDir.getAbsolutePath() + File.separator + "oldVersion");
+			disOutputDir.mkdir();
+		}
+		else{
+			disOutputDir = new File(parentOutputDir.getAbsolutePath() + File.separator + "newVersion");
+			disOutputDir.mkdir();
+		}
+		
 		for (File fi : f.listFiles()) {
 			if (fi.isDirectory())
-				processDirectory(fi, thisOutputDir, false);
+				processDirectory(fi, thisOutputDir, false, version);
 			else if (fi.getName().endsWith(".class"))
 				try {
-					processClass(fi.getName(), new FileInputStream(fi), thisOutputDir);
+					processClass(fi.getName(), new FileInputStream(fi), thisOutputDir, version);
 				} catch (FileNotFoundException e) {
 					e.printStackTrace();
 				}
@@ -214,7 +247,6 @@ public class Instrumenter {
 
 			}
 		}
-
 	}
 
 	public static void processJar(File f, File outputDir) {

@@ -10,26 +10,44 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import java.nio.file.Paths;
 
-@Mojo(name = "instrumentBytecode", defaultPhase = LifecyclePhase.PROCESS_CLASSES)
+/* Here is the entry point for maven plugin */
+@Mojo(name = "integration-test", defaultPhase = LifecyclePhase.PROCESS_CLASSES)
 public class InstrumenterMojo extends AbstractMojo {
 
 	@Component
 	private MavenProject project;
 	@Parameter(defaultValue = "false", readonly = true)
 	private boolean instrumentTest;
-
+	@Parameter(defaultValue = "")
+	private String oldVersionPath;
+	@Parameter(defaultValue = "")
+	private String newVersionPath;
+	@Parameter(defaultValue = "parse")
+	private String tempPath;
+	@Parameter(defaultValue = "")
+	private String outputPath;
+    
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
-		String buildOutput = null;
-		if(instrumentTest)
-			buildOutput = project.getBuild().getTestOutputDirectory();
-		else
-			buildOutput = project.getBuild().getOutputDirectory();
-		
-		if (buildOutput.endsWith("/"))
-			buildOutput = buildOutput.substring(0, buildOutput.length() - 1);
-		Instrumenter.main(new String[] { buildOutput, buildOutput + "-instrumented" });
+        String[] mdiffArgs = new String[4];
 
+        //System.out.println("oldVersionPath:" + oldVersionPath);
+        //System.out.println("newVersionPath:" + newVersionPath);
+        //System.out.println("outputPath:" + outputPath);
+
+        mdiffArgs[0] = oldVersionPath;
+        mdiffArgs[1] = newVersionPath;
+        mdiffArgs[2] = tempPath;
+        mdiffArgs[3] = outputPath;
+        
+        //System.out.println("arg0:" + mdiffArgs[0]);
+        //System.out.println("arg1:" + mdiffArgs[1]);
+        //System.out.println("arg2:" + mdiffArgs[2]);
+        //System.out.println("arg3:" + mdiffArgs[3]);
+        //System.out.println("pwd:" + Paths.get(".").toAbsolutePath().normalize().toString());
+
+        Instrumenter.main(mdiffArgs);
 	}
 }
